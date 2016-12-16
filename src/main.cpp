@@ -181,7 +181,7 @@ void setup(void){
   server.begin();
   Serial.println("HTTP server started");
   NumOfSensors = detectdevices();
-  setPid(40,2);
+  setPid(40,0.1);
   active = false;
 
   ArduinoOTA.setHostname("Brewer");

@@ -63,7 +63,7 @@ void setPid(float p,float i)
     int pointer = constStart + sizeof(float);
     EEPROM.put(pointer,i);
   }
-
+  EEPROM.commit();
   pk = p;
   ik = i;
 }
@@ -74,6 +74,7 @@ void setKp(float p)
   {
     int pointer = constStart;
     EEPROM.put(pointer,p);
+    EEPROM.commit();
   }
   pk = p;
 }
@@ -84,6 +85,7 @@ void setKi(float i)
   {
     int pointer = constStart + sizeof(float);
     EEPROM.put(pointer,i);
+    EEPROM.commit();
   }
   ik = i;
 }
