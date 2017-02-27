@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include "pid.h"
+#include "constants.h"
 
 float pk = 40;
 float ik = 2;
@@ -31,6 +32,7 @@ void storeconsts()
   EEPROM.put(pointer,pk);
   pointer = pointer + sizeof(float);
   EEPROM.put(pointer,ik);
+  EEPROM.commit();
 }
 
 float getKp()

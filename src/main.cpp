@@ -15,8 +15,8 @@
 
 
 
-const char* ssid = "NETGEAR77";
-const char* password = "ShinyCurtain6";
+const char* ssid = "gody7334";
+const char* password = "88888888";
 String reportbuf = "";
 bool wantsend = false;
 bool active;

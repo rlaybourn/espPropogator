@@ -6,3 +6,4 @@
 #define turnoff 0
 #define kppos 1
 #define kipos 4
+#define constStart 1

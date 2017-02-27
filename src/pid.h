@@ -1,7 +1,6 @@
 #ifndef pidfile
 #define pidfile
 
-#define constStart 1
 
 extern float pk,ik,integral,error,output;
 
