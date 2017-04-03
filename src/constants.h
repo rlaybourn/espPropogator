@@ -1,5 +1,5 @@
-#define Fridge 12
-#define Heater 14
+#define Fridge 14
+#define Heater 12
 #define Reset 10
 #define EXTREME 0.4
 #define turnon 1
@@ -7,3 +7,4 @@
 #define kppos 1
 #define kipos 4
 #define constStart 1
+#define setpointstore 20

@@ -2,17 +2,17 @@
 #include "constants.h"
 #include "pid.h"
 #include <Arduino.h>
+#include <EEPROM.h>
 
 void handleRoot() {
   String message = "";
-  message += "{\"wort\":";
+  message += "{\"temp\":";
   message += String(wort);
-  message += ",\"inside\":";
-  message += String(inside);
   message += ",\"heater\":";
-  message += String(digitalRead(Heater));
-  message += ",\"fridge\":";
-  message += String(digitalRead(Fridge));
+  message += String(humidity);
+  //message += String(controlcount);
+  message += ",\"integral\":";
+  message += String(integral);
   message += ",\"pidout\":";
   message += String(pidoutput);
   message += ",\"pwmcount\":";
@@ -25,14 +25,27 @@ void handleRoot() {
 
 void handleRaw(){
   bool updatePIDvals = false;
+  bool stored = false;
   float ki,kp;
 
   //update setpoint if values given
   for (uint8_t i=0; i<server.args(); i++){
     if(server.argName(i) == "setpoint")
     {
+      lastsetpoint = setpoint;
       setpoint = server.arg(i).toFloat();
-      active = true;
+      if(abs(setpoint - lastsetpoint) > 0.1)
+      {
+        EEPROM.put(20,setpoint);
+        EEPROM.commit();
+        stored = true;
+      }
+
+    }
+
+    //manualy set integral term
+    if(server.argName(i) == "integral"){
+      integral = server.arg(i).toFloat();
     }
 
     //update PID if values given
@@ -60,16 +73,19 @@ void handleRaw(){
   // {
   //   setPid(kp,ki);
   // }
+  float storedsp;
+  EEPROM.get(20,storedsp);
+
 
   String message = "";
   message += "{\"wort\":";
   message += String(wort);
   message += ",\"amb\":";
-  message += String(ambient);
+  message += String(stored);
   message += ",\"setp\":";
   message += String(setpoint);
-  message += ",\"inside\":";
-  message += String(inside);
+  message += ",\"stored\":";
+  message += String(storedsp);
   message += ",\"kp\":";
   message += String(getKp());
   message += ",\"Ki\":";

@@ -49,8 +49,15 @@ void loadconsts()
 {
   int pointer = constStart;
   EEPROM.get(pointer,pk);
-  pointer = pointer + sizeof(float);
-  EEPROM.get(pointer,ik);
+  //pointer = pointer + sizeof(float);
+  //EEPROM.get(pointer,ik);
+  ik = 0.15;
+}
+
+void loadsp()
+{
+  EEPROM.get(20,setpoint);
+  EEPROM.get(20,lastsetpoint);
 }
 
 void setPid(float p,float i)
@@ -83,13 +90,14 @@ void setKp(float p)
 
 void setKi(float i)
 {
-  if((i < (ik - 0.1)) || (i > (ik + 0.1)))
-  {
+  // if((i < (ik - 0.1)) || (i > (ik + 0.1)))
+  // {
     int pointer = constStart + sizeof(float);
     EEPROM.put(pointer,i);
     EEPROM.commit();
-  }
-  ik = i;
+  // }
+  integral = 0.0;
+  ik = 0.15;//i;
 }
 
 
@@ -99,13 +107,8 @@ int updatePid(float target,float current)
   error = target - current;
   pt = error * pk;
   integral = integral + (error * ik);
-  if(integral > 100)
-  {
-    integral = 100;
-  }else if (integral < - 100)
-  {
-    integral = -100;
-  }
+  integral = mini(integral,100);
+  integral = maxi(integral,-100);
 
   output = integral + pt;
   output = mini(output,100);
