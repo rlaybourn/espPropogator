@@ -255,7 +255,7 @@ void updatesensors()
 {
   if((millis() - lastiter) > 2000) //every 2 seconds
   {
-    if(readready)
+    /*if(readready)
     {
       for(int i = 0; i < NumOfSensors; i++)
       {
@@ -273,9 +273,10 @@ void updatesensors()
     {
       startReadings();
       readready = true;
-    }
+    }*/
     humidity = dht.readHumidity();
     DHTTemp = dht.readTemperature(false);
+    wort = DHTTemp;
     if(WiFi.status() == WL_CONNECTED)
     {
       digitalWrite(led, 1);
