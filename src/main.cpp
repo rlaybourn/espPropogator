@@ -277,6 +277,7 @@ void updatesensors()
     humidity = dht.readHumidity();
     DHTTemp = dht.readTemperature(false);
     wort = DHTTemp;
+    pidoutput = updatePid(setpoint,wort);
     if(WiFi.status() == WL_CONNECTED)
     {
       digitalWrite(led, 1);
