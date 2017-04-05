@@ -6,6 +6,8 @@ extern float wort;
 extern float ambient;
 extern float inside;
 extern float humidity;
+extern float tempki;
+extern float tempkp;
 extern unsigned long disconecttime;
 extern int pwmcounter;
 extern int pidoutput;

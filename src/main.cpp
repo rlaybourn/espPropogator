@@ -108,7 +108,7 @@ void setup(void){
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("HTTP server started");
-  NumOfSensors = detectdevices();
+  //NumOfSensors = detectdevices();
   setPid(40,0.1);
   setupThinger();
   setupOTA();
@@ -200,6 +200,10 @@ void setupThinger()
       {
         setKp(tempkp);
       }
+      else
+      {
+      	tempkp = pk;
+      }
     }
   );
   thing["tempki"] << inputValue(tempki,
@@ -208,6 +212,10 @@ void setupThinger()
       {
         setKi(tempki);
         ik= tempki;
+      }
+      else
+      {
+      	tempki = ik;
       }
     }
   );
@@ -274,9 +282,15 @@ void updatesensors()
       startReadings();
       readready = true;
     }*/
+    float tempwort;
     humidity = dht.readHumidity();
     DHTTemp = dht.readTemperature(false);
-    wort = DHTTemp;
+    pidoutput = updatePid(setpoint,wort);
+    tempwort = DHTTemp;
+    if((tempwort < 50.0) && (tempwort > 0.0) &&(tempwort == tempwort))
+    {
+	    wort = tempwort;
+    }
     pidoutput = updatePid(setpoint,wort);
     if(WiFi.status() == WL_CONNECTED)
     {

@@ -52,6 +52,7 @@ void handleRaw(){
     if(server.argName(i) == "kp"){
       kp = server.arg(i).toFloat();
       setKp(kp);
+      tempkp = kp;
       //updatePIDvals = true;
     }
     else
@@ -61,6 +62,7 @@ void handleRaw(){
     if(server.argName(i) == "ki"){
       ki = server.arg(i).toFloat();
       setKi(ki);
+      tempki = ki;
       //updatePIDvals = true;
     }
     else
