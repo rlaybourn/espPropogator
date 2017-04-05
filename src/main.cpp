@@ -282,14 +282,15 @@ void updatesensors()
       startReadings();
       readready = true;
     }*/
-    float tempwort;
+    float tempwort,lasttemp;
     humidity = dht.readHumidity();
     DHTTemp = dht.readTemperature(false);
     pidoutput = updatePid(setpoint,wort);
     tempwort = DHTTemp;
     if((tempwort < 50.0) && (tempwort > 0.0) &&(tempwort == tempwort))
     {
-	    wort = tempwort;
+	    lasttemp = wort;
+	    wort = (tempwort + lasttemp)/2.0; //average with last reading for more stability
     }
     pidoutput = updatePid(setpoint,wort);
     if(WiFi.status() == WL_CONNECTED)
