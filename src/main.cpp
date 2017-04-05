@@ -59,7 +59,7 @@ void setupOTA();
 void setupThinger();
 void updatesensors();
 void controltemp();
-
+void updateWifiLed();
 
 
 
@@ -112,26 +112,6 @@ void setup(void){
   setPid(40,0.1);
   setupThinger();
   setupOTA();
-  // ArduinoOTA.setHostname("Brewer");
-  // Serial.println("starting ota");
-  // ArduinoOTA.onStart([]() {
-  //   Serial.println("Start");
-  // });
-  // ArduinoOTA.onEnd([]() {
-  //   Serial.println("\nEnd");
-  // });
-  // ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-  //   Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  // });
-  // ArduinoOTA.onError([](ota_error_t error) {
-  //   Serial.printf("Error[%u]: ", error);
-  //   if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-  //   else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-  //   else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-  //   else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-  //   else if (error == OTA_END_ERROR) Serial.println("End Failed");
-  // });
-
   loadconsts();
   tempkp = pk;
   tempki = ik;
@@ -153,14 +133,7 @@ void loop(void){
 
   }
 
-  if((millis() - pwmtimer) > 100)  //counter for pwm , period is 10 seconds
-  {
-    pwmcounter++;
-    pwmcounter = pwmcounter % 100;
-    pwmtimer = millis();
-  }
-
-  if(spchanged)
+  if(spchanged) //store setpoint
   {
     int pointer = setpointstore;
     EEPROM.put(pointer,setpoint);
@@ -172,29 +145,43 @@ void loop(void){
   updatesensors();
   controltemp();
   ArduinoOTA.handle(); //allow OTA programming
+  updateWifiLed();
+
+}
+
+void updateWifiLed()
+{
+    if(WiFi.status() == WL_CONNECTED)//update wifi status led
+    {
+      digitalWrite(led, 1);
+    }
+    else
+    {
+      digitalWrite(led, 0);
+    }
 
 }
 
 void setupThinger()
 {
   thing.add_wifi(ssid, password);
-  thing["temp"] >> outputValue(wort);
-  thing["humidity"] >> outputValue(humidity);
+  thing["temp"] >> outputValue(wort); //internal temp from ds18b20
+  thing["humidity"] >> outputValue(humidity); //humidity from dht22
 
-  thing["DHT"] >> [](pson& out){
+  thing["DHT"] >> [](pson& out){     //combo hum and temp from dht22
       out["humidity"] = humidity;
       out["temp"] = DHTTemp;
     };
 
 
-  thing["setpoint"] << inputValue(setpoint,{
+  thing["setpoint"] << inputValue(setpoint,{ //allow setting of setpoint
     if((setpoint > 10) && (setpoint < 40))
     {
       EEPROM.put(20,setpoint);
       EEPROM.commit();
     }
   });
-  thing["tempkp"] << inputValue(tempkp,
+  thing["tempkp"] << inputValue(tempkp, //allow setting of kp
     {
       if((tempkp < 100) && (tempkp > 1))
       {
@@ -202,7 +189,7 @@ void setupThinger()
       }
     }
   );
-  thing["tempki"] << inputValue(tempki,
+  thing["tempki"] << inputValue(tempki, //allow adjusting of ki(current has problems storing)
     {
       if((tempki < 1) && (tempkp > 0.001))
       {
@@ -212,7 +199,7 @@ void setupThinger()
     }
   );
 }
-void setupOTA()
+void setupOTA() //setup wifi programming
 {
 
     ArduinoOTA.setHostname("Brewer");
@@ -236,7 +223,7 @@ void setupOTA()
     ArduinoOTA.begin();
 }
 
-void controltemp()
+void controltemp() //implement pwm  based on counter
 {
   float controlvar = wort;
 
@@ -248,14 +235,20 @@ void controltemp()
   {
     digitalWrite(Heater,turnoff);
   }
+  if((millis() - pwmtimer) > 100)  //counter for pwm , period is 10 seconds
+  {
+    pwmcounter++;
+    pwmcounter = pwmcounter % 100;
+    pwmtimer = millis();
+  }
 
 }
 
-void updatesensors()
+void updatesensors() //read sensors without blocking
 {
   if((millis() - lastiter) > 2000) //every 2 seconds
   {
-    if(readready)
+    if(readready)//if readings already triggered then collect results
     {
       for(int i = 0; i < NumOfSensors; i++)
       {
@@ -269,14 +262,14 @@ void updatesensors()
       Serial.print(pidoutput);Serial.print("\n");
       readready = false;
     }
-    else
+    else //otherwise trigger a reading ready for next time
     {
       startReadings();
       readready = true;
     }
-    humidity = dht.readHumidity();
+    humidity = dht.readHumidity(); //read DHT22
     DHTTemp = dht.readTemperature(false);
-    if(WiFi.status() == WL_CONNECTED)
+    if(WiFi.status() == WL_CONNECTED)//update wifi status led
     {
       digitalWrite(led, 1);
     }
