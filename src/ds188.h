@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 byte scratchpad[8];
-byte *devices[10];
+byte *devices[MAX_DEVICES];
 int NumOfSensors = 0;
 bool readready = false;
 float temperatures[8];

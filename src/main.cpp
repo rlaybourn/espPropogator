@@ -1,3 +1,6 @@
+
+#define MAX_DEVICES 10
+
 #include <OneWire.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -14,7 +17,7 @@
 #include "constants.h"
 #include <DHT.h>
 
-
+#define MAX_DEVICES 10
 
 
 const char* ssid = "gody7334";
@@ -167,6 +170,7 @@ void setupThinger()
   thing.add_wifi(ssid, password);
   thing["temp"] >> outputValue(wort); //internal temp from ds18b20
   thing["humidity"] >> outputValue(humidity); //humidity from dht22
+  thing["ip"] >> outputValue(WiFi.localIP().toString());
 
   thing["DHT"] >> [](pson& out){     //combo hum and temp from dht22
       out["humidity"] = humidity;
