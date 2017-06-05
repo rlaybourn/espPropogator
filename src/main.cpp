@@ -11,6 +11,7 @@
 #include <Wire.h>
 #include <ACROBOTIC_SSD1306.h>
 #include <EEPROM.h>
+#include <Losant.h>
 #include "ds188.h"
 #include "pid.h"
 #include "serverFuncs.h"
