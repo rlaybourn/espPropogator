@@ -23,12 +23,22 @@
 
 const char* ssid = "gody7334";
 const char* password = "88888888";
+
+// const char* mqtt_server = "192.168.0.28";
+// WiFiClient espClient;
+// PubSubClient mymqttclient(espClient);
+
+// Losant credentials.
+const char* LOSANT_DEVICE_ID = "5935a65642f50c000880cce0";
+const char* LOSANT_ACCESS_KEY = "c1458055-39c1-4f99-adee-03cd0e72fe1c";
+const char* LOSANT_ACCESS_SECRET = "fb1be3c9515ac5741cbb2c41dc02e9d6b3dbebe9abb4cb416fd34013812d56f4";
+
 String reportbuf = "";
 bool wantsend = false;
 
 
 ESP8266WebServer server(80);
-ThingerWifi thing("rlaybourn", "propogator", "banaka");
+
 #define DHTPIN 5     // what pin we're connected to
 
 // Uncomment whatever type you're using!
@@ -43,6 +53,7 @@ float setpoint = 0.0;
 float lastsetpoint = 0.0;
 bool spchanged = false;
 unsigned long controlcount = 0;
+unsigned long lastUpdate = millis();
 
 float wort;
 float ambient;
@@ -53,10 +64,15 @@ float humidity = 0.0;
 float DHTTemp = 0.0;
 unsigned long disconecttime = millis();
 unsigned long pwmtimer = millis();
+unsigned long lastdbg = millis();
 int pwmcounter = 0;
 int pidoutput = 100;
 
-
+const char* mqtt_server = "192.168.0.28";
+WiFiClientSecure wifiClient;
+WiFiClient espClient;
+PubSubClient mymqttclient(espClient);
+LosantDevice device(LOSANT_DEVICE_ID);
 
 
 void setupOTA();
@@ -64,8 +80,9 @@ void setupThinger();
 void updatesensors();
 void controltemp();
 void updateWifiLed();
-
-
+void handleCommand(LosantCommand *command);
+//callback for non losant mqtt connection
+void callback(char* topic, byte* payload, unsigned int length);
 
 
 void setup(void){
@@ -114,17 +131,42 @@ void setup(void){
   Serial.println("HTTP server started");
   NumOfSensors = detectdevices();
   setPid(40,0.1);
-  setupThinger();
   setupOTA();
   loadconsts();
   tempkp = pk;
   tempki = ik;
   loadsp();
 
+
+  //losant connection
+  device.onCommand(&handleCommand);
+  device.connectSecure(wifiClient, LOSANT_ACCESS_KEY, LOSANT_ACCESS_SECRET);
+  while(!device.connected()) {
+    delay(500);
+    Serial.print(".");
+  }
+  StaticJsonBuffer<400> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  Serial.println("update");
+  root["setpoint"] = setpoint;
+  root["power"] = 0;
+  root["kp"] = pk;
+  device.sendState(root);
+
+  mymqttclient.setServer(mqtt_server, 1883);
+  mymqttclient.setCallback(callback);
+   if(mymqttclient.connect("arduinoClient", "richard", "banaka44"))
+   {
+     Serial.println("connected ok");
+     mymqttclient.publish("test", "hello P");
+     mymqttclient.subscribe("testin");
+   }
+
+
 }
 
 void loop(void){
-  thing.handle();
+
   if (WiFi.status() != WL_CONNECTED) //try to reconnect
   {
     WiFi.disconnect();
@@ -136,6 +178,11 @@ void loop(void){
     }
 
   }
+  device.loop();
+  if(mymqttclient.connected())//report to personal mqtt server
+  {
+    mymqttclient.loop();
+  }
 
   if(spchanged) //store setpoint
   {
@@ -143,6 +190,50 @@ void loop(void){
     EEPROM.put(pointer,setpoint);
     EEPROM.commit();
     spchanged = false;
+  }
+
+  if((millis() - lastdbg) > 5000)
+  {
+    if(mymqttclient.connected())//report to personal mqtt server
+    {
+      char msg[30];
+      sprintf(msg,"p %d -%ul",pidoutput,millis());
+      mymqttclient.publish("pr/1/dbg", msg,false);
+    }
+    lastdbg = millis();
+  }
+
+  if((millis() - lastUpdate) > 240000)
+  {
+    StaticJsonBuffer<400> jsonBuffer;
+    JsonObject& root = jsonBuffer.createObject();
+    Serial.println("update");
+    root["curtemp"] = wort;
+    root["humidity"] = humidity;
+    root["setpoint"] = setpoint;
+    root["power"] = pidoutput;
+    root["kp"] = pk;
+    device.sendState(root);
+    String output;
+    root.printTo(output);
+
+    if(mymqttclient.connected())//report to personal mqtt server
+    {
+      mymqttclient.publish("pr/1/stat", output.c_str(),true);
+    }
+    else
+    {
+      if(mymqttclient.connect("arduinoClient", "richard", "banaka44"))
+      {
+        Serial.println("connected ok");
+        mymqttclient.publish("pr/1/stat", output.c_str(),true);
+        mymqttclient.subscribe("ir/1/cmd");
+      }
+    }
+
+
+
+    lastUpdate =  millis();
   }
 
   server.handleClient();
@@ -166,44 +257,7 @@ void updateWifiLed()
 
 }
 
-void setupThinger()
-{
-  thing.add_wifi(ssid, password);
-  thing["temp"] >> outputValue(wort); //internal temp from ds18b20
-  thing["humidity"] >> outputValue(humidity); //humidity from dht22
-  thing["ip"] >> outputValue(WiFi.localIP().toString());
 
-  thing["DHT"] >> [](pson& out){     //combo hum and temp from dht22
-      out["humidity"] = humidity;
-      out["temp"] = DHTTemp;
-    };
-
-
-  thing["setpoint"] << inputValue(setpoint,{ //allow setting of setpoint
-    if((setpoint > 10) && (setpoint < 40))
-    {
-      EEPROM.put(20,setpoint);
-      EEPROM.commit();
-    }
-  });
-  thing["tempkp"] << inputValue(tempkp, //allow setting of kp
-    {
-      if((tempkp < 100) && (tempkp > 1))
-      {
-        setKp(tempkp);
-      }
-    }
-  );
-  thing["tempki"] << inputValue(tempki, //allow adjusting of ki(current has problems storing)
-    {
-      if((tempki < 1) && (tempkp > 0.001))
-      {
-        setKi(tempki);
-        ik= tempki;
-      }
-    }
-  );
-}
 void setupOTA() //setup wifi programming
 {
 
@@ -285,4 +339,23 @@ void updatesensors() //read sensors without blocking
 
       lastiter = millis();
   }
+}
+
+void handleCommand(LosantCommand *command)
+{
+  JsonObject& payload = *command->payload;
+  if(strcmp(command->name, "setp") == 0)
+  {
+    Serial.println("seting new period");
+    float newTemp = payload["T"];
+    Serial.println(newTemp);
+    setpoint = newTemp;
+    int pointer = setpointstore;
+    EEPROM.put(pointer,setpoint);
+    EEPROM.commit();
+  }
+}
+
+//callback for non losant mqtt connection
+void callback(char* topic, byte* payload, unsigned int length) {
 }
