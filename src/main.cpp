@@ -155,7 +155,7 @@ void setup(void){
 
   mymqttclient.setServer(mqtt_server, 1883);
   mymqttclient.setCallback(callback);
-   if(mymqttclient.connect("arduinoClient", "richard", "banaka44"))
+   if(mymqttclient.connect("proper", "richard", "banaka44"))
    {
      Serial.println("connected ok");
      mymqttclient.publish("test", "hello P");
@@ -178,7 +178,9 @@ void loop(void){
     }
 
   }
+
   device.loop();
+
   if(mymqttclient.connected())//report to personal mqtt server
   {
     mymqttclient.loop();
@@ -197,8 +199,12 @@ void loop(void){
     if(mymqttclient.connected())//report to personal mqtt server
     {
       char msg[30];
-      sprintf(msg,"p %d -%ul",pidoutput,millis());
+      sprintf(msg,"p %d -%lu",pidoutput,millis());
       mymqttclient.publish("pr/1/dbg", msg,false);
+    }
+    else
+    {
+      mymqttclient.connect("proper", "richard", "banaka44");
     }
     lastdbg = millis();
   }
@@ -215,15 +221,22 @@ void loop(void){
     root["kp"] = pk;
     device.sendState(root);
     String output;
-    root.printTo(output);
-
+    if(device.connected())
+    {
+      root.printTo(output);
+    }
+    else
+    {
+      device.connectSecure(wifiClient, LOSANT_ACCESS_KEY, LOSANT_ACCESS_SECRET);
+    }
+    
     if(mymqttclient.connected())//report to personal mqtt server
     {
       mymqttclient.publish("pr/1/stat", output.c_str(),true);
     }
     else
     {
-      if(mymqttclient.connect("arduinoClient", "richard", "banaka44"))
+      if(mymqttclient.connect("proper", "richard", "banaka44"))
       {
         Serial.println("connected ok");
         mymqttclient.publish("pr/1/stat", output.c_str(),true);
