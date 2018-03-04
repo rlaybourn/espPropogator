@@ -68,7 +68,7 @@ unsigned long lastdbg = millis();
 int pwmcounter = 0;
 int pidoutput = 100;
 
-const char* mqtt_server = "192.168.0.28";
+const char* mqtt_server = "192.168.0.12";
 WiFiClientSecure wifiClient;
 WiFiClient espClient;
 PubSubClient mymqttclient(espClient);
@@ -215,7 +215,7 @@ void loop(void){
     JsonObject& root = jsonBuffer.createObject();
     Serial.println("update");
     root["curtemp"] = wort;
-    root["humidity"] = humidity;
+    root["humidity"] = 50;//humidity;
     root["setpoint"] = setpoint;
     root["power"] = pidoutput;
     root["kp"] = pk;
